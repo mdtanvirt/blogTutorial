@@ -11,86 +11,70 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import APIView
+from rest_framework import generics
+from rest_framework import mixins
+from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
 
-class ArticleList(APIView):
-    def get(self, request):
-        articles = Article.objects.all()
-        serializer = ArticleSerializer(articles, many=True)
+# 'ViewSet' is act like controller with 'router'
+class ArticleViewSet(viewsets.ViewSet):
+    def list(self, request):
+        article = Article.objects.all()
+        serializers = ArticleSerializer(article, many=True)
+        return Response(serializers.data)
+
+    def create(self, request):
+        serializers = ArticleSerializer(data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data, status=status.HTTP_201_CREATED)
+        return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrive(self, request, pk=None):
+        queryset = Article.objects.all()
+        article = get_object_or_404(queryset, pk=pk)
+        serializer = ArticleSerializer(article)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer = ArticleSerializer(data=request.data)
+    def update(self, request, pk=None):
+        article = Article.objects.get(pk=pk) 
+        serializer = ArticleSerializer(article, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
-class ArticleDetails(APIView):
-    def get_object(self, id):
-        try:
-            article = Article.objects.get(id=id)
-
-        except Article.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-    def get(self, request, id):
-        article = self.get_object(id)
-        serializer = ArticleSerializer(article)
-        return Response(serializer.data)
-
-
-    def put(self, request, id):
-        article = self.get_object(id)
-        serializer = ArticleSerializer(article, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, id):
-        article = self.get_object(id)
+    def destroy(self, request, pk=None):
+        article = Article.objects.get(pk=pk)
         article.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 '''
-@api_view(['GET', 'POST'])
-def artical_list(request):
-    #get all the article list
-    if request.method == 'GET':
-        articles = Article.objects.all() #get all data from model(DB)
-        serializer = ArticleSerializer(articles, many=True) #serilize data
-        return Response(serializer.data)
+# Using GenericAPIView
+class ArticleList(generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateModelMixin):
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
 
-    elif request.method == 'POST':
-        serializer = ArticleSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request):
+        return self.list(request)
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def article_details(request, pk):
-    try:
-        article = Article.objects.get(pk=pk)
+    def post(self, request):
+        return self.create(request)
 
-    except Article.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class ArticleDetails(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
+    
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
 
-    if request.method == 'GET':
-        serializer = ArticleSerializer(article)
-        return Response(serializer.data)
+    lookup_field = 'id'
 
-    elif request.method == 'PUT':
-        serializer = ArticleSerializer(article, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, id):
+        return self.retrieve(request, id=id)
 
-    elif request.method == 'DELETE':
-        article.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def put(self, request, id):
+        return self.update(request, id=id)
+
+    def delete(self, request, id):
+        return self.destroy(request, id=id)
 
 '''
