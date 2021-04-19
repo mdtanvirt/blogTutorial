@@ -1,9 +1,17 @@
 import React, {Component} from 'react';
 
 class MyClass extends Component { 
+
+    clicked() {
+        alert('Clicked from Class Button')
+    }
+
     render() {
         return(
-            <h1>We are inside class components</h1>
+            <div>
+                <h1>Email: {this.props.email}</h1>
+                <button className="btn btn-primary" onClick={this.clicked}>Click from Class</button>
+            </div>
             )
     }
 }
